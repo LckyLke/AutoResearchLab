@@ -76,8 +76,7 @@ Extra keys are stored and displayed. The primary metric decides the
 champion; ties and regressions are rejected. Eval scripts can never be
 whitelisted as editable — the agent cannot grade itself.
 
-**Tip — enforce a fixed compute budget inside your eval** (an idea straight
-from karpathy/autoresearch): when the metric depends on how long something
+**Tip — enforce a fixed compute budget inside your eval**: when the metric depends on how long something
 runs (training, search, simulation), have the eval script cap the compute
 (e.g. "train for exactly 5 minutes", "solver gets 15 seconds" like the
 bundled TSP demo). Iterations stay comparable, and the agent optimizes
