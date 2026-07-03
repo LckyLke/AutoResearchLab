@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoResearchLab</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%AC%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+  <div class="app">
+    <!-- ======================= Sidebar ======================= -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark"><svg viewBox="0 0 24 24" width="17" height="17" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M4 17 9 6l4 8 3-5 4 8"/></svg></div>
+        <div>
+          <div class="brand-name">AutoResearchLab</div>
+          <div class="brand-sub">eval-driven agent loop</div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" id="btn-new">＋&ensp;New experiment</button>
+      <div class="side-label">Experiments</div>
+      <nav class="exp-list" id="exp-list" aria-label="Experiments"></nav>
+      <div class="sidebar-footer" id="data-dir" title="Where results are stored"></div>
+    </aside>
+
+    <!-- ======================= Main ======================= -->
+    <main class="main" id="main">
+      <!-- Empty state -->
+      <section class="view" id="view-empty">
+        <div class="empty">
+          <div class="empty-mark"><svg viewBox="0 0 24 24" width="30" height="30" fill="none"
+            stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M4 17 9 6l4 8 3-5 4 8"/></svg></div>
+          <h1>Autonomous research,<br/>human out of the loop</h1>
+          <p>Pick a folder, choose the files an agent may edit, point at an evaluation
+             command — then let the loop search for a better solution while you do
+             something else. Every improvement becomes the new champion; every version
+             stays downloadable.</p>
+          <button class="btn btn-primary" id="btn-new-2">Create your first experiment</button>
+        </div>
+      </section>
+
+      <!-- ================= Setup wizard ================= -->
+      <section class="view hidden" id="view-setup">
+        <header class="view-head">
+          <h1>New experiment</h1>
+          <p class="muted">Runs unattended once started. Your original folder is never modified.</p>
+        </header>
+
+        <div class="setup-grid">
+          <div class="card">
+            <h2><span class="step-no">1</span> Name &amp; workspace</h2>
+            <label class="field">
+              <span>Experiment name</span>
+              <div class="input-row">
+                <input type="text" id="f-name" placeholder="e.g. improve-forecaster" />
+                <button class="btn btn-icon" id="btn-dice" title="Roll a new name" aria-label="Random name">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                    <rect x="4" y="4" width="16" height="16" rx="3.5"/>
+                    <circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/>
+                    <circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/>
+                    <circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/>
+                    <circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/>
+                  </svg>
+                </button>
+              </div>
+            </label>
+            <label class="field">
+              <span>Workspace folder (absolute path)</span>
+              <div class="input-row">
+                <input type="text" id="f-workspace" placeholder="/home/you/project" />
+                <button class="btn btn-icon" id="btn-browse-ws" title="Browse folders" aria-label="Browse folders">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 7V5.5A1.5 1.5 0 0 1 4.5 4h4l2 2.5h8A1.5 1.5 0 0 1 20 8v9.5a1.5 1.5 0 0 1-1.5 1.5h-14A1.5 1.5 0 0 1 3 17.5Z"/></svg>
+                </button>
+                <button class="btn" id="btn-load-tree">Load files</button>
+              </div>
+            </label>
+          </div>
+
+          <div class="card">
+            <h2><span class="step-no">2</span> Editable files
+              <span class="muted-inline">— the agent is hard-blocked from touching anything else</span></h2>
+            <div class="tree-toolbar hidden" id="tree-toolbar">
+              <input type="text" id="f-tree-search" placeholder="Filter files… (e.g. .py, models/)" />
+              <button class="btn btn-sm" id="btn-select-visible">Select visible</button>
+              <button class="btn btn-sm" id="btn-clear-visible">Clear visible</button>
+              <span class="tree-count" id="tree-count"></span>
+            </div>
+            <div class="file-tree" id="file-tree">
+              <p class="muted">Load a workspace to list its files.</p>
+            </div>
+            <label class="field">
+              <span>Extra glob patterns (optional, comma-separated — e.g. <code>src/models/*.py</code>)</span>
+              <input type="text" id="f-globs" placeholder="" />
+            </label>
+            <label class="field">
+              <span>Ignore patterns (optional, comma-separated — folders/files to exclude from the
+                    snapshot and file list, e.g. <code>data</code>, <code>*.ckpt</code>).
+                    Junk like <code>node_modules</code>, <code>.git</code>, <code>.venv</code>
+                    is always ignored at any depth.</span>
+              <input type="text" id="f-ignore" placeholder="" />
+            </label>
+          </div>
+
+          <div class="card">
+            <h2><span class="step-no">3</span> Evaluation</h2>
+            <label class="field">
+              <span>Eval command (runs in the workspace)</span>
+              <input type="text" id="f-eval-cmd" placeholder="python eval.py" />
+            </label>
+            <div class="field-row">
+              <label class="field">
+                <span>Primary metric key</span>
+                <input type="text" id="f-metric" placeholder="rmse" />
+              </label>
+              <label class="field">
+                <span>Direction</span>
+                <select id="f-direction">
+                  <option value="maximize">maximize</option>
+                  <option value="minimize">minimize</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Eval timeout (s)</span>
+                <input type="number" id="f-eval-timeout" value="600" min="1" />
+              </label>
+            </div>
+            <p class="hint">The command must write <code>metrics.json</code> — a JSON object
+               containing the metric key (or print it as the last stdout line).
+               Eval files cannot be marked editable.</p>
+            <label class="field" style="margin-top:12px">
+              <span>Holdout eval command (optional — anti-overfitting guard)</span>
+              <input type="text" id="f-holdout-cmd" placeholder="python eval.py --holdout" />
+            </label>
+            <p class="hint">Runs only when a new champion is crowned, on a different
+               seed/split of your choosing. Its score is shown to you but <b>never to the
+               agent</b> — if champion and holdout curves diverge, the agent is overfitting
+               the visible eval.</p>
+          </div>
+
+          <div class="card">
+            <h2><span class="step-no">4</span> Python environment</h2>
+            <div class="seg" id="env-seg" role="tablist">
+              <button class="seg-btn active" data-env="conda">Conda</button>
+              <button class="seg-btn" data-env="venv">venv</button>
+              <button class="seg-btn" data-env="system">System</button>
+            </div>
+            <div id="env-fields">
+              <label class="field" id="env-conda-field">
+                <span>Conda environment</span>
+                <select id="f-conda-env"><option value="">loading…</option></select>
+              </label>
+              <label class="field hidden" id="env-venv-field">
+                <span>Path to virtualenv</span>
+                <div class="input-row">
+                  <input type="text" id="f-venv-path" placeholder="/home/you/project/.venv" />
+                  <button class="btn btn-icon" id="btn-browse-venv" title="Browse folders" aria-label="Browse folders">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 7V5.5A1.5 1.5 0 0 1 4.5 4h4l2 2.5h8A1.5 1.5 0 0 1 20 8v9.5a1.5 1.5 0 0 1-1.5 1.5h-14A1.5 1.5 0 0 1 3 17.5Z"/></svg>
+                  </button>
+                </div>
+              </label>
+            </div>
+            <div class="input-row">
+              <button class="btn" id="btn-check-env">Verify environment</button>
+              <div class="env-check" id="env-check-result"></div>
+            </div>
+            <label class="check-field">
+              <input type="checkbox" id="f-inform-agent" checked />
+              <span>Tell the agent which Python version &amp; packages this environment provides</span>
+            </label>
+            <p class="hint">Eval and agent commands run inside this environment —
+               <code>python</code>/<code>pip</code> on PATH belong to it.</p>
+          </div>
+
+          <div class="card">
+            <h2><span class="step-no">5</span> Agent</h2>
+            <div class="field-row">
+              <label class="field">
+                <span>Agent type</span>
+                <select id="f-agent-type">
+                  <option value="claude_code">Claude Code CLI (default)</option>
+                  <option value="anthropic_api">Anthropic API</option>
+                  <option value="openai_compat">OpenAI-compatible endpoint (local models)</option>
+                  <option value="command">Custom command</option>
+                </select>
+              </label>
+              <label class="field" id="model-select-field">
+                <span>Model</span>
+                <select id="f-model-select"></select>
+              </label>
+              <label class="field hidden" id="model-custom-field">
+                <span id="model-custom-label">Custom model ID</span>
+                <input type="text" id="f-model" placeholder="claude-…" />
+              </label>
+            </div>
+            <div id="agent-extra"></div>
+          </div>
+
+          <div class="card">
+            <h2><span class="step-no">6</span> Budgets</h2>
+            <div class="field-row">
+              <label class="field">
+                <span>Agent time / iteration (s)</span>
+                <input type="number" id="f-agent-timeout" value="1800" min="10" />
+              </label>
+              <label class="field">
+                <span>Max iterations (empty = until stopped)</span>
+                <input type="number" id="f-max-iter" placeholder="∞" min="1" />
+              </label>
+              <label class="field">
+                <span>Total time budget (s, optional)</span>
+                <input type="number" id="f-max-runtime" placeholder="∞" min="1" />
+              </label>
+              <label class="field">
+                <span>Cost budget ($, optional)</span>
+                <input type="text" id="f-max-cost" inputmode="decimal" placeholder="∞" />
+              </label>
+            </div>
+            <p class="hint">The cost budget uses the agent's own usage reporting
+               (exact for Claude Code; token counts only for API endpoints without pricing).</p>
+          </div>
+
+          <div class="card">
+            <h2><span class="step-no">7</span> Instructions for the agent</h2>
+            <div class="toolbar">
+              <button class="btn btn-sm" id="btn-load-default">Load default</button>
+              <button class="btn btn-sm" id="btn-load-template">Load template</button>
+            </div>
+            <textarea id="f-instructions" rows="12" spellcheck="false"></textarea>
+            <p class="hint">Saved as <code>instructions.md</code>; editable later from the
+               dashboard between iterations.</p>
+          </div>
+        </div>
+
+        <div class="setup-actions">
+          <div class="error" id="setup-error"></div>
+          <button class="btn" id="btn-cancel-setup">Cancel</button>
+          <button class="btn btn-primary" id="btn-create">Create experiment</button>
+        </div>
+      </section>
+
+      <!-- ================= Dashboard ================= -->
+      <section class="view hidden" id="view-dash">
+        <div class="runbar" id="runbar"><div class="runbar-fill"></div></div>
+
+        <header class="view-head dash-head">
+          <div>
+            <h1 id="dash-name"></h1>
+            <div class="dash-sub">
+              <span class="status-pill" id="dash-status">idle</span>
+              <span class="dash-meta" id="dash-meta"></span>
+            </div>
+          </div>
+          <div class="dash-actions">
+            <button class="btn btn-danger hidden" id="btn-stop">Stop after iteration</button>
+            <button class="btn btn-primary" id="btn-start">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg>
+              Start loop</button>
+            <button class="btn btn-icon" id="btn-delete" title="Delete experiment">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- live activity console (visible only while running) -->
+        <div class="console-card hidden" id="activity-card">
+          <div class="console-head">
+            <div class="stepper" id="stepper">
+              <span class="step" data-step="sync">sync</span>
+              <span class="step" data-step="agent">agent</span>
+              <span class="step" data-step="eval">eval</span>
+              <span class="step" data-step="decide">decide</span>
+            </div>
+            <div class="console-status">
+              <span id="activity-iter"></span>
+              <span class="console-clock" id="activity-clock">0:00</span>
+            </div>
+          </div>
+          <div class="console-body" id="activity-log" aria-live="polite"></div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat stat-hero">
+            <div class="stat-label" id="stat-metric-label">metric</div>
+            <div class="stat-value" id="stat-champion">–</div>
+            <div class="stat-foot" id="stat-champion-foot">champion</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">baseline</div>
+            <div class="stat-value" id="stat-baseline">–</div>
+            <div class="stat-foot" id="stat-improvement">&nbsp;</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">iterations</div>
+            <div class="stat-value" id="stat-iters">0</div>
+            <div class="stat-foot" id="stat-champions">0 improvements</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">environment</div>
+            <div class="stat-value stat-value-sm" id="stat-env">system</div>
+            <div class="stat-foot" id="stat-env-foot">&nbsp;</div>
+          </div>
+          <div class="stat stat-actions">
+            <button class="btn btn-block" id="btn-dl-champion">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round"><path d="M12 4v11m0 0l-4-4m4 4 4-4M5 20h14"/></svg>
+              Champion zip</button>
+            <button class="btn btn-block btn-sm" id="btn-edit-instructions">Edit instructions</button>
+            <button class="btn btn-block btn-sm" id="btn-view-notebook">Agent notebook</button>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="chart-head">
+            <h2 id="chart-title">Metric trend</h2>
+            <div class="legend" id="chart-legend">
+              <span class="legend-item"><span class="swatch swatch-attempt"></span>attempt</span>
+              <span class="legend-item"><span class="swatch swatch-champ"></span>champion</span>
+              <span class="legend-item hidden" id="legend-holdout"><span class="swatch swatch-holdout"></span>holdout</span>
+              <span class="legend-item"><span class="swatch swatch-fail"></span>failed eval</span>
+            </div>
+          </div>
+          <div class="chart-wrap" id="chart-wrap">
+            <svg id="chart" role="img" aria-label="Metric per iteration"></svg>
+            <div class="chart-tooltip hidden" id="chart-tooltip"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="chart-head">
+            <h2>Knowledge library
+              <span class="muted-inline">— read-only reference material for the agent (PDFs auto-extracted to text)</span></h2>
+            <div>
+              <input type="file" id="knowledge-file" multiple hidden
+                     accept=".pdf,.md,.txt,.rst,.csv,.json,.yaml,.yml,.tex,.html" />
+              <button class="btn btn-sm" id="btn-upload-knowledge">＋ Add documents</button>
+            </div>
+          </div>
+          <div class="knowledge-list" id="knowledge-list"></div>
+        </div>
+
+        <div class="card">
+          <h2>Iterations</h2>
+          <div class="table-wrap">
+            <table class="iter-table" id="iter-table">
+              <thead>
+                <tr>
+                  <th>#</th><th id="th-metric">metric</th><th>Δ vs champion</th><th>status</th>
+                  <th>duration</th><th>cost</th><th>summary of change</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="iter-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Iteration detail drawer -->
+  <div class="drawer hidden" id="drawer">
+    <div class="drawer-backdrop" id="drawer-backdrop"></div>
+    <div class="drawer-panel">
+      <header class="drawer-head">
+        <h2 id="drawer-title">Iteration</h2>
+        <div class="drawer-head-actions">
+          <a class="btn btn-sm" id="drawer-download" href="#">Download this version</a>
+          <button class="btn btn-sm btn-icon" id="drawer-close" aria-label="Close">✕</button>
+        </div>
+      </header>
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="diff">Changes (diff)</button>
+        <button class="tab" data-tab="summary">Summary</button>
+        <button class="tab" data-tab="log">Agent log</button>
+        <button class="tab" data-tab="meta">Metrics &amp; sandbox</button>
+      </div>
+      <div class="drawer-body">
+        <pre class="pane diff-pane" id="pane-diff"></pre>
+        <pre class="pane hidden" id="pane-summary"></pre>
+        <pre class="pane hidden" id="pane-log"></pre>
+        <pre class="pane hidden" id="pane-meta"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agent notebook modal -->
+  <div class="drawer hidden" id="notebook-modal">
+    <div class="drawer-backdrop" id="notebook-backdrop"></div>
+    <div class="drawer-panel narrow">
+      <header class="drawer-head">
+        <h2>Agent notebook</h2>
+        <button class="btn btn-sm btn-icon" id="notebook-close" aria-label="Close">✕</button>
+      </header>
+      <div class="drawer-body pad">
+        <p class="hint">The agent's persistent memory (<code>AGENT_NOTES.md</code>): what it
+           tried, what failed and why. Survives rejected iterations so it never retries dead
+           ends. You may edit it to steer the search — applies from the next iteration.</p>
+        <textarea id="notebook-text" rows="18" spellcheck="false"></textarea>
+        <div class="toolbar right">
+          <button class="btn btn-primary" id="notebook-save">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Instructions modal -->
+  <div class="drawer hidden" id="instr-modal">
+    <div class="drawer-backdrop" id="instr-backdrop"></div>
+    <div class="drawer-panel narrow">
+      <header class="drawer-head">
+        <h2>Instructions</h2>
+        <button class="btn btn-sm btn-icon" id="instr-close" aria-label="Close">✕</button>
+      </header>
+      <div class="drawer-body pad">
+        <p class="hint">Applied from the next iteration onward.</p>
+        <textarea id="instr-text" rows="18" spellcheck="false"></textarea>
+        <div class="toolbar right">
+          <button class="btn" id="instr-default">Load default</button>
+          <button class="btn" id="instr-template">Load template</button>
+          <button class="btn btn-primary" id="instr-save">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Folder picker modal -->
+  <div class="drawer hidden" id="browse-modal">
+    <div class="drawer-backdrop" id="browse-backdrop"></div>
+    <div class="modal-panel">
+      <header class="drawer-head">
+        <h2>Choose a folder</h2>
+        <button class="btn btn-sm btn-icon" id="browse-close" aria-label="Close">✕</button>
+      </header>
+      <div class="browse-pathbar">
+        <input type="text" id="browse-path" spellcheck="false" />
+        <button class="btn btn-sm" id="browse-go">Go</button>
+      </div>
+      <div class="browse-list" id="browse-list"></div>
+      <footer class="browse-foot">
+        <span class="browse-current" id="browse-current"></span>
+        <button class="btn btn-primary" id="browse-select">Select this folder</button>
+      </footer>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
