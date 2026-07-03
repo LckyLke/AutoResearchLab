@@ -27,10 +27,6 @@ pip install -r requirements.txt
 python run.py                # → http://127.0.0.1:8321
 ```
 
-On first start a ready-to-run demo experiment is seeded — **demo ·
-traveling salesman** (find the shortest tour through 120 cities; a long
-ladder of improvements from ~63 down to the provable optimum ~8.76). Press
-▶ *Start loop* and watch. Deleting it is respected; it won't come back.
 
 To set up your own experiment:
 
