@@ -27,24 +27,40 @@ pip install -r requirements.txt
 python run.py                # → http://127.0.0.1:8321
 ```
 
-Then in the GUI:
+On first start a ready-to-run demo experiment is seeded — **demo ·
+traveling salesman** (find the shortest tour through 120 cities; a long
+ladder of improvements from ~63 down to the provable optimum ~8.76). Press
+▶ *Start loop* and watch. Deleting it is respected; it won't come back.
 
-1. **New experiment** → point at a folder (try `examples/quickstart`).
-2. Tick the files the agent may edit — **everything else is hard-blocked**:
-   changes outside the whitelist are detected and reverted automatically.
+To set up your own experiment:
+
+1. **New experiment** → point at a folder (browse popup or path).
+2. Tick the files the agent may edit (searchable list, glob patterns) —
+   **everything else is hard-blocked**: changes outside the whitelist are
+   detected and reverted automatically.
 3. Enter the eval command (e.g. `python eval.py`), the metric key
-   (e.g. `rmse`) and its direction.
+   (e.g. `rmse`) and its direction. Optionally add a **holdout eval
+   command** — an overfitting guard run only on new champions, whose score
+   is shown to you but never to the agent.
 4. Pick the Python environment the eval and agent should run in — a conda
    env (auto-listed), a virtualenv, or system Python. Verify it with one
    click; the agent is told which Python version and packages it provides.
-5. Pick an agent — Claude Code CLI by default; the Anthropic API, any
-   OpenAI-compatible endpoint (Ollama, vLLM, LM Studio, …), or any custom
-   CLI also work.
-6. Adjust the instructions (a default and an annotated template are built in).
-7. **Start loop.** Human out of the loop from here: a live console streams
+5. Pick an agent — Claude Code CLI by default (Fable/Opus/Sonnet/Haiku
+   dropdown); the Anthropic API, any OpenAI-compatible endpoint (Ollama,
+   vLLM, LM Studio, …), or any custom CLI also work.
+6. Set budgets: per-iteration agent time, max iterations, total runtime,
+   and an optional **cost budget in $** (from the agent's own usage
+   reporting).
+7. Adjust the instructions (a default and an annotated template are built in).
+8. **Start loop.** Human out of the loop from here: a live console streams
    the agent's actions (tool calls, thoughts, eval runs) with a phase
    stepper and per-iteration timer — or close the tab; the loop runs
    server-side until you stop it or a budget is hit.
+
+At any point you can drop **knowledge** onto an experiment — papers (PDFs
+are text-extracted, with OCR fallback for scans), notes, specs. The agent
+gets an auto-generated index at `knowledge/INDEX.md` and reads documents on
+demand; the folder is read-only to it.
 
 ## The evaluation contract
 
@@ -67,21 +83,33 @@ runs (training, search, simulation), have the eval script cap the compute
 bundled TSP demo). Iterations stay comparable, and the agent optimizes
 *what to do with the budget* instead of just using more of it.
 
-## Safety model
+## How the loop stays honest
 
-- Your original folder is **never touched**. Experiments run on a snapshot.
-- Before each agent run, non-editable files are made read-only; afterwards
-  the whole tree is re-hashed and any illegal change (modify / delete /
-  create outside the whitelist) is reverted and logged as a violation.
-- The agent cannot edit the eval command's script or the metrics file.
+- **Sandbox**: your original folder is never touched — experiments run on a
+  snapshot. Before each agent run, non-editable files are made read-only;
+  afterwards the whole tree is re-hashed and any illegal change (modify /
+  delete / create outside the whitelist) is reverted and logged as a
+  violation. Eval/holdout scripts, the metrics file, and the `knowledge/`
+  folder can never be edited by the agent. Temporary files belong in
+  `.scratch/` — sanctioned, never snapshotted, wiped each iteration.
+- **Holdout eval** (optional): a hidden second eval scores every new
+  champion on a split the agent never sees, drawn as its own line on the
+  chart — divergence between the curves is overfitting made visible.
+- **Agent notebook**: the agent maintains `AGENT_NOTES.md`, a persistent
+  memory that survives rejected iterations — recorded failures are never
+  retried. Viewable and editable from the dashboard to steer the search.
+- **Cost tracking**: per-iteration and cumulative $ / tokens on the
+  dashboard, with an optional hard cost budget as a stop condition.
 
 ## Results on disk
 
 Everything is plain files under `experiments/<id>/` — see
 `autoresearch/storage.py` for the layout: per-iteration `meta.json`,
-`agent.log`, `changes.diff` and a file snapshot, plus `history.jsonl` and
-the current champion. Any version (including the champion) can be
-downloaded from the GUI as a full runnable workspace zip.
+`agent.log`, `changes.diff` and a file snapshot, plus `history.jsonl`, the
+current champion, `notebook.md` (the agent's memory) and the knowledge
+library. Any version (including the champion) can be downloaded from the
+GUI as a full runnable workspace zip. `experiments/` is git-ignored — it is
+data, not source.
 
 ## Agents
 
